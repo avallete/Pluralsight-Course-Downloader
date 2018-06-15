@@ -1,31 +1,97 @@
-$(function () {
+function PluralSightDownloader() {
+    function sleep(milliseconds) {
+      let start = new Date().getTime();
+      for (let i = 0; i < 1e7; i++) {
+          if ((new Date().getTime() - start) > milliseconds){
+              break;
+          }
+      }
+  }
+    function downloadVideo (cb) {
+        let link = $("#vjs_video_3_html5_api").attr("src");
 
-  $(document).keydown(function (e) {
+        let coursename = $('#course-title-link').text();
+        coursename = coursename.replace(/[\/:?><\W]/g, "");
 
-    if (e.key === "s") {
+        let selectedVideo = $('li.selected');
+        let sectionHeader =  selectedVideo.parents('ul').eq(0).prev('header');
+        let sectionIndex = sectionHeader.parents('section.module').eq(0).index();
+        let sectionHeaderText = sectionHeader.find('h2').text();
 
-      var link = $("#vjs_video_3_html5_api").attr("src");
+        let folder = `${sectionIndex}_${sectionHeaderText}`;
+        folder = folder.replace(/\s/g, "_");
+        folder = folder.replace(/[\/:?><\W]/g, "");
 
-      var coursename = $("#course-title-link").text();
-      coursename = coursename.replace(/[\/:?><]/g, "");
+        let videoIndex = selectedVideo.prevAll().length;
+        let videoName = selectedVideo.find('h3').text();
 
-      var folder = $("li.selected").parents("ul").prev("header").children("div").eq(1);
-      folder = (folder.parents("section.module.open").eq(0).index() + 1) + " - " + folder.find("h2").text();
-      folder = folder.replace(/[\/:?><]/g, "");
-
-      var filename = $("li.selected").eq(1).index() + 1 + " - " + $("#module-clip-title").text().split(" : ").pop().trim() + "." + link.split("?")[0].split(".").pop();
-      filename = filename.replace(/[\/:?><]/g, "");
-
-      chrome.runtime.sendMessage({
-        greeting: "download",
-        link: link,
-        filename: "Pluralsight/" + coursename + "/" + folder + "/" + filename
-      }, function (response) {
-        console.log(response.farewell);
-      });
-
+        let filename = `${videoIndex}_${videoName}`;
+        filename = filename.replace(/\s/g, "_");
+        filename = filename.replace(/[\/:?><\W]/g, "");
+        chrome.runtime.sendMessage({
+            greeting: "download",
+            link: link,
+            filename: "Pluralsight/" + coursename + "/" + folder + "/" + filename + '.mp4'
+        }, function (response) {
+            console.log(response.farewell);
+            cb(response);
+        });
     }
+    function uncollapseSection(section) {
+        if (!section.classList.contains('open')) {
+            section.firstChild.focus();
+            section.firstChild.click();
+        }
+        sleep(500);
+    }
+    function getFirstSectionVideo(section) {
+        return $(section).find('li')[0];
+    }
+    function downloadPlaylist () {
+        let videoPlayer = jQuery.find('video')[0];
+        let section = jQuery.find('section.module')[0];
+        uncollapseSection(section);
+        let sectionVideo = getFirstSectionVideo(section);
+        // Trigger download when video player is ready
+        videoPlayer.addEventListener('loadeddata', function downloadVideoPlayerContent() {
+          sleep(5000);
+          console.log('Player is ready with new dataloaded, download video');
+          console.log('Launch video download');
+          downloadVideo(() => {
+              if (sectionVideo.nextSibling) {
+                  console.log('Next video');
+                  sectionVideo = sectionVideo.nextSibling;
+                  sectionVideo.focus();
+                  sectionVideo.click();
+              }
+              else if (section.nextSibling) {
+                  console.log('Next section');
+                  section = section.nextSibling;
+                  uncollapseSection(section);
+                  sectionVideo = getFirstSectionVideo(section);
+                  sectionVideo.focus();
+                  sectionVideo.click();
+              }
+              else {
+                  window.alert('No more videos to load');
+              }
+          });
+        });
+        sectionVideo.focus();
+        sectionVideo.click();
+    }
+    function handleKeyPress(e) {
+      console.log('handlePresskey');
+      if (e.key === "a") {
+          console.log('Download playlist');
+          downloadPlaylist();
+      }
+      if (e.key === "s") {
+          console.log('Download video');
+          downloadVideo(() => console.log('Video downloaded successfully'));
+      }
+    }
+    $(document).keydown(handleKeyPress);
+}
 
-  });
-
-});
+$(document).on('ready', PluralSightDownloader());
