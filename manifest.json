@@ -1,9 +1,9 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Pluralsight Course Downloader",
   "description": "Easily download course video from pluralsight.",
-  "version": "0.3",
-  "author": "Vatsal Joshi",
+  "version": "0.4",
+  "author": "Valleteau Andrew",
   "homepage_url": "https://github.com/vatz88/Pluralsight-Course-Downloader",
   "content_scripts": [{
     "matches": ["https://app.pluralsight.com/*"],
