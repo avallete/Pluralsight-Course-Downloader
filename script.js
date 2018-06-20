@@ -109,6 +109,7 @@ function PluralSightDownloader() {
         let bookmarks = $('tr[class^="tableRow---"] td:first-child a');
         let currentIndex = 0;
         let currentBookmark = null;
+        let coursename = null;
         let moveForward = false;
         const port = chrome.extension.connect({ name: 'Opened tab communications' });
         port.onMessage.addListener((msg) => {
@@ -120,6 +121,7 @@ function PluralSightDownloader() {
         while (currentIndex < bookmarks.length) {
             await sleep(1000);
             currentBookmark = bookmarks[currentIndex];
+            coursename = new URL(currentBookmark.href).searchParams.get('course');
             await sleep(1000);
             chrome.runtime.sendMessage({
                 greeting: 'downloadPlaylist',
@@ -127,7 +129,7 @@ function PluralSightDownloader() {
             });
             while (!moveForward) {
                 await sleep(5000);
-                port.postMessage({ request: 'getPlaylistDownloadStatus', url: currentBookmark.href })
+                port.postMessage({ request: 'getPlaylistDownloadStatus', coursename: coursename })
             }
             await sleep(10000);
             moveForward = false;

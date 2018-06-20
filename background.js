@@ -124,8 +124,9 @@ run();
 
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
+        let coursename = "";
         console.log('onMessage received', request, sender);
-        if (request.greeting == "download") {
+        if (request.greeting === "download") {
             filename = request.filename;
             flag = true;
             try {
@@ -139,18 +140,20 @@ chrome.runtime.onMessage.addListener(
                 alert("Error: " + err.message);
             }
         }
-        if (request.greeting == "downloadPlaylist") {
+        if (request.greeting === "downloadPlaylist") {
             console.log('downloadPlaylist', request);
             chrome.tabs.create({ url: request.url }, (tab) => {
                 console.log('new tab created', tab);
-                openedtabs[tab.url] = { url: tab.url, executed: false, finished: false, callback: sendResponse };
+                coursename = new URL(tab.url).searchParams.get('course');
+                openedtabs[coursename] = { url: coursename, executed: false, finished: false, callback: sendResponse };
                 console.log('openedtabs', openedtabs);
             });
         }
-        if (request.greeting == "playlistDownloaded") {
+        if (request.greeting === "playlistDownloaded") {
             console.log('background');
             console.log('openedtabs', openedtabs);
-            openedtabs[sender.tab.url].finished = true;
+            coursename = new URL(sender.tab.url).searchParams.get('course');
+            openedtabs[coursename].finished = true;
         }
     });
 
@@ -159,7 +162,7 @@ chrome.extension.onConnect.addListener(function (port) {
    port.onMessage.addListener(function(msg) {
        console.log('port receive msg', msg);
        if (msg.request === 'getPlaylistDownloadStatus') {
-           const tabstatus = openedtabs[msg.url];
+           const tabstatus = openedtabs[msg.coursename];
            if (tabstatus) {
                port.postMessage({ type: 'tabstatus', status: tabstatus });
            }
@@ -168,10 +171,11 @@ chrome.extension.onConnect.addListener(function (port) {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (openedtabs[tab.url] && openedtabs[tab.url].executed === false && changeInfo.status === 'complete') {
+    const coursename = new URL(tab.url).searchParams.get('course');
+    if (openedtabs[coursename] && openedtabs[coursename].executed === false && changeInfo.status === 'complete') {
         console.log('new tab complete loaded');
         chrome.tabs.executeScript(tabId, { code: downloadPlaylistTabScript, runAt: 'document_end'}, null);
-        openedtabs[tab.url].executed = true;
+        openedtabs[coursename].executed = true;
     }
 });
 
